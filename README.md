@@ -30,7 +30,7 @@ pip install jinja2 pyyaml
 python3 gen.py config/dut_tb.yaml
 
 # 3. Go straight to writing stimulus
-cd generated_my_dut/sim
+cd generated_dut_tb/sim
 make compile
 make run VSEQ=smoke_vseq
 ```
@@ -87,9 +87,8 @@ generated_<project>/
 ## YAML Config Reference
 
 ```yaml
-project_name  : my_tb           # used in all package names
 dut_module    : my_dut          # top-level RTL module name
-output_dir    : generated_my_tb # where to write files
+output_dir    : generated_dut_tb # where to write files
 
 clk_period_ns : 10              # clk_rst_if period
 reset_cycles  : 5               # initial reset width
