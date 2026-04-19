@@ -1,0 +1,83 @@
+//============================================================
+// TB Top : tb_top
+//============================================================
+
+module tb_top;
+
+  `include "uvm_macros.svh"
+  import uvm_pkg::*;
+
+  // =========================================================
+  // 1. Interfaces
+  // =========================================================
+  clk_rst_if clk_rst_if_inst();
+
+{% for ag in agents %}
+  {{ ag.name }}_if {{ ag.name }}_if_inst (
+      .clk   (clk_rst_if_inst.clk),
+      .rst_n (clk_rst_if_inst.rst_n)
+  );
+{% endfor %}
+
+  // =========================================================
+  // 2. DUT Instantiation
+  // ─────────────────────────────────────────────────────────
+  // TODO: Connect DUT ports to interface signals
+  // =========================================================
+  {{ cfg.dut_module }} dut_inst (
+      .clk   (clk_rst_if_inst.clk),
+      .rst_n (clk_rst_if_inst.rst_n)
+      // TODO: connect remaining DUT ports here
+      // Example:
+{% for ag in agents %}
+{% for p in ag.ports %}
+      // .{{ p.name }} ({{ ag.name }}_if_inst.{{ p.name }}),
+{% endfor %}
+{% endfor %}
+  );
+
+  // =========================================================
+  // 3. Internal signal assignments
+  // ─────────────────────────────────────────────────────────
+  // TODO: Assign any internal DUT signals that interfaces need
+  // Example:
+  // assign ag1_if_inst.ready_for_next_insn = dut_inst.ready_for_next_insn;
+  // =========================================================
+
+
+  // =========================================================
+  // 4. Config DB — push interfaces + run test
+  // =========================================================
+  initial begin
+    uvm_config_db#(virtual clk_rst_if)::set(
+        null, "uvm_test_top*", "clk_rst_vif", clk_rst_if_inst);
+
+{% for ag in agents %}
+    uvm_config_db#(virtual {{ ag.name }}_if.DRV_MP)::set(
+        null, "uvm_test_top*", "{{ ag.name }}_vif", {{ ag.name }}_if_inst.DRV_MP);
+    uvm_config_db#(virtual {{ ag.name }}_if.MON_MP)::set(
+        null, "uvm_test_top*", "{{ ag.name }}_vif", {{ ag.name }}_if_inst.MON_MP);
+
+{% endfor %}
+    run_test();
+  end
+
+  // =========================================================
+  // 5. Waveform dump (Verdi/FSDB)
+  // =========================================================
+  initial begin
+    string fsdb_name;
+    if ($value$plusargs("FSDB_NAME=%s", fsdb_name))
+      $fsdbDumpfile(fsdb_name);
+    else
+      $fsdbDumpfile("{{ cfg.project_name }}.fsdb");
+
+    $fsdbDumpvars(0, tb_top.clk_rst_if_inst);
+{% for ag in agents %}
+    $fsdbDumpvars(0, tb_top.{{ ag.name }}_if_inst);
+{% endfor %}
+    $fsdbDumpMDA;
+    $fsdbDumpSVA;
+  end
+
+endmodule

@@ -1,0 +1,50 @@
+//============================================================
+// Interface : {{ ag.name }}_if
+// Description : Interface for {{ ag.name }} agent
+// ── ADD your design-specific signal declarations below ──
+//============================================================
+
+interface {{ ag.name }}_if (input logic clk, input logic rst_n);
+
+  // =========================================================
+  // Signal Declarations
+  // ─────────────────────────────────────────────────────────
+  // Generated from YAML ports. Edit widths / add signals here.
+  // =========================================================
+{% for p in ag.ports %}
+{% if p.width == 1 %}
+  logic         {{ p.name }};
+{% else %}
+  logic [{{ p.width - 1 }}:0] {{ p.name }};
+{% endif %}
+{% endfor %}
+
+  // =========================================================
+  // Driver Clocking Block
+  // =========================================================
+  clocking drv_cb @(posedge clk);
+{% for p in ag.ports %}
+{% if p.direction == "input" %}
+    output {{ p.name }};
+{% else %}
+    input  {{ p.name }};
+{% endif %}
+{% endfor %}
+  endclocking
+
+  // =========================================================
+  // Monitor Clocking Block
+  // =========================================================
+  clocking mon_cb @(posedge clk);
+{% for p in ag.ports %}
+    input  {{ p.name }};
+{% endfor %}
+  endclocking
+
+  // =========================================================
+  // Modports
+  // =========================================================
+  modport DRV_MP (clocking drv_cb, input rst_n, input clk);
+  modport MON_MP (clocking mon_cb, input rst_n, input clk);
+
+endinterface : {{ ag.name }}_if

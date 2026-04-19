@@ -1,0 +1,21 @@
+package {{ ag.name }}_agent_pkg;
+
+  import uvm_pkg::*;
+  `include "uvm_macros.svh"
+
+  `include "{{ ag.name }}_item.sv"
+  `include "{{ ag.name }}_agent_cfg.sv"
+  `include "{{ ag.name }}_sequencer.sv"
+  `include "{{ ag.name }}_driver.sv"
+  `include "{{ ag.name }}_monitor.sv"
+{% if ag.coverage %}
+  `include "{{ ag.name }}_agent_cov.sv"
+{% endif %}
+  `include "{{ ag.name }}_agent.sv"
+
+  `include "{{ ag.name }}_sequences/{{ ag.name }}_base_seq.sv"
+{% for seq in ag.sequences %}
+  `include "{{ ag.name }}_sequences/{{ ag.name }}_{{ seq }}_seq.sv"
+{% endfor %}
+
+endpackage

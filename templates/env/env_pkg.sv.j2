@@ -1,0 +1,21 @@
+package env_pkg;
+
+  import uvm_pkg::*;
+  `include "uvm_macros.svh"
+
+  import {{ cfg.project_name }}_chk_pkg::*;
+{% for ag in agents %}
+  import {{ ag.name }}_agent_pkg::*;
+{% endfor %}
+
+  `include "env_cfg.sv"
+  `include "virtual_sequencer.sv"
+  `include "scoreboard.sv"
+  `include "env.sv"
+
+  `include "virtual_sequences/base_vseq.sv"
+{% for vs in cfg.virtual_seqs %}
+  `include "virtual_sequences/{{ vs }}_vseq.sv"
+{% endfor %}
+
+endpackage

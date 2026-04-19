@@ -1,0 +1,119 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║   UVM TB Generator — Generic Project Config Template             ║
+# ║                                                                  ║
+# ║   HOW TO USE:                                                    ║
+# ║   1. Copy this file → config/<your_project>.yaml                 ║
+# ║   2. Replace dut_tb / dut_module with your project name          ║
+# ║   3. Rename ag1 / ag2 to meaningful agent names                  ║
+# ║   4. Fill in ports for each agent from your DUT interface spec   ║
+# ║   5. Add your test sequence names to sequences / virtual_seqs    ║
+# ║   6. Run: python3 gen.py config/<your_project>.yaml              ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+project_name  : dut_tb        # → used in package names, chk_pkg, makefile
+dut_module    : dut           # → RTL top-level module name in top.sv
+output_dir    : generated_dut_tb
+
+# ── Clock / Reset ─────────────────────────────────────────────────
+clk_period_ns : 10            # nanoseconds
+reset_cycles  : 5             # how many cycles reset is held
+
+# ── Global include / define files ─────────────────────────────────
+# Compiled first, before everything else.
+# Leave as [] if your project has no global defines.
+global_defines: []
+# Example:
+#   global_defines:
+#     - design_files/Include/my_defines.sv
+#     - design_files/Include/my_typedefs.sv
+
+# ── RTL design files ──────────────────────────────────────────────
+# Listed in compilation order.
+design_files:
+  - design_files/dut.sv
+# Example for multiple files:
+#   design_files:
+#     - design_files/dut_top.sv
+#     - design_files/dut_submodule.sv
+
+# ── Agents ────────────────────────────────────────────────────────
+#
+# name      : short prefix used in ALL generated filenames and class names
+#             e.g. "apb" → apb_driver.sv, apb_item, apb_agent_pkg etc.
+#
+# active    : true  → driver + sequencer created (UVM_ACTIVE)
+#             false → monitor only              (UVM_PASSIVE)
+#
+# coverage  : true  → generates <name>_agent_cov.sv subscriber
+#
+# sequences : list of test-specific sequence names.
+#             Each entry → <name>_<seq>_seq.sv with a do_randomize() stub.
+#             Always starts with "smoke" as the minimum sanity check.
+#
+# ports     : signals on the interface.
+#             direction "input"  → TB drives this into DUT (drv_cb output)
+#             direction "output" → DUT drives this out    (drv_cb input)
+#             width              → signal bit width
+#
+agents:
+
+  # ── Agent 1 ─────────────────────────────────────────────────────
+  # Rename "ag1" to something meaningful for your DUT
+  # e.g. "apb", "axi_master", "fetch", "tx", "ctrl" etc.
+  - name      : ag1
+    active    : true
+    coverage  : true
+    sequences :
+      - smoke       # always keep smoke as the first/minimum sequence
+      - smoke2      # add more sequences as your test plan grows
+    ports:
+      # TODO: Replace these with your actual DUT port names and widths
+      # TB drives → DUT (direction: input)
+      - { name: valid,  direction: input,  width: 1  }
+      - { name: data,   direction: input,  width: 32 }
+      # DUT drives → TB (direction: output)
+      - { name: ready,  direction: output, width: 1  }
+
+  # ── Agent 2 ─────────────────────────────────────────────────────
+  # Rename "ag2" to something meaningful for your DUT
+  # e.g. "hbm", "axi_slave", "bram", "rx", "mem" etc.
+  - name      : ag2
+    active    : true
+    coverage  : true
+    sequences :
+      - smoke
+      - smoke2
+    ports:
+      # TODO: Replace these with your actual DUT port names and widths
+      - { name: req,    direction: input,  width: 1  }
+      - { name: addr,   direction: input,  width: 32 }
+      - { name: ack,    direction: output, width: 1  }
+      - { name: rdata,  direction: output, width: 32 }
+
+  # ── Add more agents as needed ────────────────────────────────────
+  # - name      : ag3
+  #   active    : false     # passive monitor only
+  #   coverage  : true
+  #   sequences : []
+  #   ports:
+  #     - { name: signal_a, direction: output, width: 8 }
+
+# ── Virtual sequences ─────────────────────────────────────────────
+# One <name>_vseq.sv generated per entry.
+# These are the top-level test scenarios that coordinate all agents.
+# Start with smoke1/smoke2, then add one entry per test in your plan.
+virtual_seqs:
+  - smoke1      # basic connectivity — 1 transaction end-to-end
+  - smoke2      # slightly more coverage — a few transactions
+
+# ── Regression list ───────────────────────────────────────────────
+# Subset of virtual_seqs that runs in make regress.
+# Usually all of them, but you can exclude WIP tests here.
+regression_seqs:
+  - smoke1
+  - smoke2
+
+# ── Options ───────────────────────────────────────────────────────
+scoreboard  : true    # generate scoreboard with TLM FIFOs
+coverage    : true    # generate coverage subscribers per agent
+timeout_ns  : 6000    # per-test watchdog timeout in nanoseconds

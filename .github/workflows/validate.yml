@@ -1,0 +1,99 @@
+name: Generator Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-generator:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: pip install jinja2 pyyaml
+
+    - name: Generate DUT TB (generic 2-agent example)
+      run: python3 gen.py config/dut_tb.yaml
+
+    - name: Verify DUT TB file count
+      run: |
+        COUNT=$(find generated_dut_tb -type f | wc -l)
+        echo "Generated $COUNT files"
+        [ "$COUNT" -ge 80 ] || (echo "ERROR: Expected >=80 files, got $COUNT" && exit 1)
+
+    - name: Generate FIFO TB (2-agent demo)
+      run: python3 gen.py examples/fifo_tb/config/fifo_tb.yaml
+
+    - name: Verify FIFO TB structure
+      run: |
+        python3 - << 'EOF'
+        import os, sys
+
+        expected = [
+            "generated_fifo_tb/top.sv",
+            "generated_fifo_tb/interfaces/wr_if.sv",
+            "generated_fifo_tb/interfaces/rd_if.sv",
+            "generated_fifo_tb/interfaces/clk_rst_if.sv",
+            "generated_fifo_tb/tb_files/agents/wr_agent/wr_agent_pkg.sv",
+            "generated_fifo_tb/tb_files/agents/rd_agent/rd_agent_pkg.sv",
+            "generated_fifo_tb/tb_files/env/env_pkg.sv",
+            "generated_fifo_tb/tb_files/env/scoreboard.sv",
+            "generated_fifo_tb/tb_files/env/virtual_sequencer.sv",
+            "generated_fifo_tb/tb_files/tb_test/test.sv",
+            "generated_fifo_tb/sim/makefile",
+            "generated_fifo_tb/sim/regress_summary.py",
+        ]
+
+        missing = [f for f in expected
+                   if not os.path.exists(
+                       os.path.join("examples/fifo_tb", f))]
+        if missing:
+            print("MISSING FILES:")
+            for f in missing:
+                print(f"  {f}")
+            sys.exit(1)
+        else:
+            print(f"All {len(expected)} key files present.")
+        EOF
+
+    - name: Check no empty generated files
+      run: |
+        python3 - << 'EOF'
+        import os, sys
+        empty = []
+        for root, dirs, files in os.walk("generated_dut_tb"):
+            for f in files:
+                path = os.path.join(root, f)
+                if os.path.getsize(path) == 0:
+                    empty.append(path)
+        if empty:
+            print("EMPTY FILES FOUND:")
+            for f in empty: print(f"  {f}")
+            sys.exit(1)
+        print(f"All files non-empty. OK.")
+        EOF
+
+    - name: Validate YAML config loads cleanly
+      run: |
+        python3 - << 'EOF'
+        import yaml, sys
+        configs = [
+            "config/dut_tb.yaml",
+            "examples/fifo_tb/config/fifo_tb.yaml"
+        ]
+        for c in configs:
+            with open(c) as f:
+                cfg = yaml.safe_load(f)
+            assert "project_name" in cfg, f"Missing project_name in {c}"
+            assert "agents"       in cfg, f"Missing agents in {c}"
+            print(f"  {c} — OK  ({len(cfg['agents'])} agents)")
+        EOF

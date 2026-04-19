@@ -1,0 +1,37 @@
+//============================================================
+// Coverage : {{ ag.name }}_agent_cov
+// ── ADD covergroups for your protocol here ──
+//============================================================
+
+class {{ ag.name }}_agent_cov extends uvm_subscriber #({{ ag.name }}_item);
+  `uvm_component_utils({{ ag.name }}_agent_cov)
+
+  // =========================================================
+  // TODO: Define your covergroup(s) here
+  // Example:
+  //   covergroup {{ ag.name }}_cg with function sample ({{ ag.name }}_item t);
+  //     option.per_instance = 1;
+  //     field_cp : coverpoint t.field {
+  //       bins low  = {[0:127]};
+  //       bins high = {[128:255]};
+  //     }
+  //   endgroup
+  // =========================================================
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+    // {{ ag.name }}_cg = new();
+  endfunction
+
+  virtual function void write({{ ag.name }}_item t);
+    // {{ ag.name }}_cg.sample(t);
+  endfunction
+
+  function void report_phase(uvm_phase phase);
+    super.report_phase(phase);
+    // `uvm_info("COV_REPORT",
+    //   $sformatf("{{ ag.name }} Coverage: %0.2f%%", {{ ag.name }}_cg.get_inst_coverage()),
+    //   UVM_LOW)
+  endfunction
+
+endclass

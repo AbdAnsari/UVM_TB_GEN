@@ -1,0 +1,29 @@
+//============================================================
+// Interface : clk_rst_if
+//============================================================
+
+interface clk_rst_if ();
+
+  logic clk;
+  logic rst_n;
+
+  parameter CLK_PERIOD = {{ cfg.clk_period_ns }}ns;
+
+  initial begin
+    clk = 0;
+    forever #(CLK_PERIOD/2) clk = ~clk;
+  end
+
+  initial begin
+    rst_n = 0;
+    repeat ({{ cfg.reset_cycles }}) @(posedge clk);
+    rst_n = 1;
+  end
+
+  task apply_reset(int unsigned reset_width_clks = 2);
+    rst_n = 0;
+    repeat (reset_width_clks) @(posedge clk);
+    rst_n = 1;
+  endtask
+
+endinterface

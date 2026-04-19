@@ -1,0 +1,222 @@
+############################################################
+# COMMANDS
+############################################################
+# make compile                           - Compile design
+# make run VSEQ=smoke_vseq           - Run single test
+# make run VSEQ=smoke_vseq DUMP=1    - Run with waveform
+# make regress                           - Run regression
+# make regress DUMP=1                    - With waves
+# make cov                               - Coverage report
+# make merge_cov                         - Merge regression coverage
+# make clean                             - Clean all files
+# make help                              - Show this help
+
+############################################################
+# USER CONTROLS
+############################################################
+
+TEST      ?= test
+VSEQ      ?= smoke_vseq
+SEED      ?= $$RANDOM
+VERB      ?= UVM_HIGH
+COV       ?= line+cond+fsm+branch+tgl
+DUMP      ?= 0
+
+SIMV      = simv
+LOG_DIR   = logs
+COV_DIR   = simv.vdb
+REG_DIR   = regression_data
+
+############################################################
+# PATHS
+############################################################
+
+DESIGN_DIR = ../design_files
+IF_DIR     = ../interfaces
+TB_DIR     = ../tb_files
+
+############################################################
+# FILE LISTS
+############################################################
+
+GLOBAL_DEFINES = \
+{% for f in cfg.global_defines %}
+	$(DESIGN_DIR)/{{ f.split('design_files/')[-1] }}{% if not loop.last %} \{% endif %}
+
+{% endfor %}
+
+INTERFACE_FILES = \
+	$(IF_DIR)/clk_rst_if.sv \
+{% for ag in agents %}
+	$(IF_DIR)/{{ ag.name }}_if.sv{% if not loop.last %} \{% endif %}
+
+{% endfor %}
+
+DESIGN_FILES = \
+{% for f in cfg.design_files %}
+	$(DESIGN_DIR)/{{ f.split('design_files/')[-1] }}{% if not loop.last %} \{% endif %}
+
+{% endfor %}
+
+PKG_FILES = \
+	$(TB_DIR)/pkg/{{ cfg.project_name }}_chk_pkg.sv \
+{% for ag in agents %}
+	$(TB_DIR)/agents/{{ ag.name }}_agent/{{ ag.name }}_agent_pkg.sv \
+{% endfor %}
+	$(TB_DIR)/env/env_pkg.sv \
+	$(TB_DIR)/tb_test/test_pkg.sv
+
+TOP_FILE = ../top.sv
+
+############################################################
+# DEFAULT
+############################################################
+
+all: clean compile run
+
+############################################################
+# CLEAN
+############################################################
+clean:
+	@echo "Cleaning build files..."
+	@rm -rf $(SIMV) *.daidir csrc *.log *.key *.vpd \
+	        *.fsdb *.fsdb.* $(COV_DIR) urgReport \
+	        $(LOG_DIR) $(REG_DIR) vc_hdrs.h ucli.key \
+	        verdiLog novas.* *.rc *.conf
+	@echo "Clean complete!"
+
+############################################################
+# COMPILE
+############################################################
+compile:
+	@echo "=========================================="
+	@echo "Compiling with VCS..."
+	@echo "=========================================="
+	vcs -full64 -sverilog \
+		-ntb_opts uvm-1.2 \
+		-lca \
+		-kdb_elab \
+		+acc +vpi \
+		-debug_access+all \
+		-timescale=1ns/1ns \
+		-cm $(COV) \
+		-cm_dir $(COV_DIR) \
+		-P $${VERDI_HOME}/share/PLI/VCS/LINUX64/novas.tab \
+		$${VERDI_HOME}/share/PLI/VCS/LINUX64/pli.a \
+		+incdir+$(DESIGN_DIR)/Include \
+		+incdir+$(TB_DIR) \
+		+incdir+$(TB_DIR)/pkg \
+{% for ag in agents %}
+		+incdir+$(TB_DIR)/agents/{{ ag.name }}_agent \
+		+incdir+$(TB_DIR)/agents/{{ ag.name }}_agent/{{ ag.name }}_sequences \
+{% endfor %}
+		+incdir+$(TB_DIR)/env \
+		+incdir+$(TB_DIR)/env/virtual_sequences \
+		+incdir+$(TB_DIR)/tb_test \
+		$(GLOBAL_DEFINES) \
+		$(INTERFACE_FILES) \
+		$(DESIGN_FILES) \
+		$(PKG_FILES) \
+		$(TOP_FILE) \
+		-o $(SIMV)
+	@echo "=========================================="
+	@echo "  Compilation complete!"
+	@echo "=========================================="
+
+############################################################
+# RUN
+############################################################
+run:
+	@mkdir -p $(LOG_DIR)
+	$(eval ACTUAL_SEED := $(if $(filter $$RANDOM,$(SEED)),$(shell echo $$RANDOM),$(SEED)))
+	@echo "=========================================="
+	@echo "Running: VSEQ=$(VSEQ) SEED=$(ACTUAL_SEED)"
+	@echo "=========================================="
+ifeq ($(DUMP),1)
+	./$(SIMV) \
+		-cm $(COV) \
+		+UVM_TESTNAME=$(TEST) \
+		+VSEQ=$(VSEQ) \
+		+ntb_random_seed=$(ACTUAL_SEED) \
+		+UVM_VERBOSITY=$(VERB) \
+		+FSDB_NAME=$(VSEQ)_$(ACTUAL_SEED).fsdb \
+		-l $(LOG_DIR)/$(TEST)_$(VSEQ)_seed$(ACTUAL_SEED).log
+else
+	./$(SIMV) \
+		-cm $(COV) \
+		+UVM_TESTNAME=$(TEST) \
+		+VSEQ=$(VSEQ) \
+		+ntb_random_seed=$(ACTUAL_SEED) \
+		+UVM_VERBOSITY=$(VERB) \
+		-l $(LOG_DIR)/$(TEST)_$(VSEQ)_seed$(ACTUAL_SEED).log
+endif
+	@echo "=========================================="
+	@echo "  Log: $(LOG_DIR)/$(TEST)_$(VSEQ)_seed$(ACTUAL_SEED).log"
+	@echo "=========================================="
+
+############################################################
+# REGRESSION
+############################################################
+
+ITERATIONS ?= 5
+VSEQ_LIST  ?= \
+{% for seq in cfg.regression_seqs %}
+    st_{{ seq }}_vseq{% if not loop.last %} \{% endif %}
+
+{% endfor %}
+
+regress: compile
+	@mkdir -p $(LOG_DIR)
+	@mkdir -p $(REG_DIR)
+	@echo "=========================================="
+	@echo "  Starting Regression"
+	@echo "  Sequences: $(words $(VSEQ_LIST))"
+	@echo "  Iterations: $(ITERATIONS) each"
+	@echo "=========================================="
+	@for vseq in $(VSEQ_LIST); do \
+		for i in $$(seq 1 $(ITERATIONS)); do \
+			RAND_SEED=$$(echo $$RANDOM); \
+			RUN_ID=$${vseq}_seed$${RAND_SEED}; \
+			DUMP_ARG=$$( [ "$(DUMP)" = "1" ] && echo "+FSDB_NAME=$(REG_DIR)/$$RUN_ID.fsdb" || echo "" ); \
+			echo "Launching $$RUN_ID"; \
+			./$(SIMV) +UVM_TESTNAME=$(TEST) +VSEQ=$$vseq \
+				+ntb_random_seed=$$RAND_SEED \
+				+UVM_VERBOSITY=$(VERB) \
+				$$DUMP_ARG \
+				-cm $(COV) -cm_dir $(REG_DIR)/$$RUN_ID.vdb \
+				-l $(LOG_DIR)/$$RUN_ID.log -q & \
+		done; \
+		wait; \
+	done
+	@echo "=========================================="
+	@echo "  Regression complete!"
+	@echo "=========================================="
+	@python3 regress_summary.py
+
+############################################################
+# COVERAGE
+############################################################
+cov:
+	@urg -dir $(COV_DIR)
+	@echo "Coverage report: urgReport/dashboard.html"
+
+merge_cov:
+	@urg -dir $(COV_DIR) -dir $(REG_DIR)/*.vdb -dbname merged_regress.vdb
+	@echo "Merged: urgReport/dashboard.html"
+
+############################################################
+# HELP
+############################################################
+help:
+	@echo "=========================================="
+	@echo "UVM TB Generator — {{ cfg.project_name }}"
+	@echo "=========================================="
+	@echo "  make compile"
+	@echo "  make run VSEQ=smoke_vseq"
+	@echo "  make run VSEQ=smoke_vseq SEED=12345 DUMP=1"
+	@echo "  make regress ITERATIONS=3"
+	@echo "  make regress DUMP=1"
+	@echo "  make cov"
+	@echo "=========================================="
+
+.PHONY: all clean compile run cov regress merge_cov help

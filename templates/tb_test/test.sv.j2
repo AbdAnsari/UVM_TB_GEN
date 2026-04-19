@@ -1,0 +1,76 @@
+//============================================================
+// Test : test
+// Description : Top-level generic test — run via +VSEQ=<name>
+//============================================================
+
+class test extends uvm_test;
+  `uvm_component_utils(test)
+
+  env      env;
+  test_cfg m_cfg;
+  string   vseq_name;
+
+  function new(string name = "test", uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  // ---------------------------------------------------------
+  // Build Phase
+  // ---------------------------------------------------------
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+
+    // ── VSEQ override via plusarg ─────────────────────────
+    if ($value$plusargs("VSEQ=%s", vseq_name)) begin
+      `uvm_info("TEST",
+        $sformatf("Overriding base_vseq with %s", vseq_name), UVM_LOW)
+      uvm_factory::get().set_type_override_by_name("base_vseq", vseq_name);
+    end
+
+    // ── Create test config ────────────────────────────────
+    m_cfg = test_cfg::type_id::create("m_cfg");
+
+{% for ag in agents %}
+    m_cfg.m_env_cfg.{{ ag.name }}_cfg.is_active =
+        {{ "UVM_ACTIVE" if ag.active else "UVM_PASSIVE" }};
+{% endfor %}
+
+    // ── Collect virtual interfaces from config DB ─────────
+    // (set by top.sv initial block)
+{% for ag in agents %}
+    if (!uvm_config_db#(virtual {{ ag.name }}_if.DRV_MP)::get(
+            this, "", "{{ ag.name }}_vif",
+            m_cfg.m_env_cfg.{{ ag.name }}_cfg.vif_drv))
+      `uvm_fatal("TEST", "Could not get {{ ag.name }}_if DRV_MP")
+
+    if (!uvm_config_db#(virtual {{ ag.name }}_if.MON_MP)::get(
+            this, "", "{{ ag.name }}_vif",
+            m_cfg.m_env_cfg.{{ ag.name }}_cfg.vif_mon))
+      `uvm_fatal("TEST", "Could not get {{ ag.name }}_if MON_MP")
+
+{% endfor %}
+    // ── Push env config ───────────────────────────────────
+    uvm_config_db#(env_cfg)::set(this, "env", "cfg", m_cfg.m_env_cfg);
+
+    // ── Create env ────────────────────────────────────────
+    env = env_pkg::env::type_id::create("env", this);
+  endfunction
+
+  // ---------------------------------------------------------
+  // Run Phase
+  // ---------------------------------------------------------
+  task run_phase(uvm_phase phase);
+    base_vseq vseq;
+
+    phase.raise_objection(this);
+    vseq = base_vseq::type_id::create("vseq");
+    if (vseq == null)
+      `uvm_fatal("TEST", "Failed to create virtual sequence via factory!")
+    `uvm_info("TEST",
+      $sformatf("Starting virtual sequence: %s", vseq.get_type_name()), UVM_LOW)
+    vseq.start(env.vseqr);
+    #100ns;
+    phase.drop_objection(this);
+  endtask
+
+endclass

@@ -1,0 +1,18 @@
+//============================================================
+// Configuration : {{ ag.name }}_agent_cfg
+//============================================================
+
+class {{ ag.name }}_agent_cfg extends uvm_object;
+
+  `uvm_object_utils({{ ag.name }}_agent_cfg)
+
+  uvm_active_passive_enum is_active = {{ "UVM_ACTIVE" if ag.active else "UVM_PASSIVE" }};
+
+  virtual {{ ag.name }}_if.DRV_MP vif_drv;
+  virtual {{ ag.name }}_if.MON_MP vif_mon;
+
+  function new(string name = "{{ ag.name }}_agent_cfg");
+    super.new(name);
+  endfunction
+
+endclass

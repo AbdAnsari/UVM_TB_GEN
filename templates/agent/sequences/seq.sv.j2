@@ -1,0 +1,41 @@
+//============================================================
+// Sequence : {{ ag.name }}_{{ seq_name }}_seq
+// ── ADD your stimulus logic inside body() ──
+//============================================================
+
+class {{ ag.name }}_{{ seq_name }}_seq extends {{ ag.name }}_base_seq;
+  `uvm_object_utils({{ ag.name }}_{{ seq_name }}_seq)
+
+  // Class-level item handle required for virtual sequence visibility
+  {{ ag.name }}_item item;
+
+  function new(string name = "{{ ag.name }}_{{ seq_name }}_seq");
+    super.new(name);
+  endfunction
+
+  // Override for inline randomization specialisation
+  virtual function bit do_randomize();
+    return item.randomize();
+    // TODO: add 'with { ... }' constraints specific to this test
+  endfunction
+
+  virtual task body();
+    repeat(1) begin
+      item = {{ ag.name }}_item::type_id::create("item");
+
+      // ── Select constraint mode ─────────────────────────
+      // item.constraint_mode(0);
+      // item.my_constraint.constraint_mode(1);
+
+      start_item(item);
+      if (!do_randomize())
+        `uvm_error(get_type_name(), "Randomization failed")
+      finish_item(item);
+
+      `uvm_info(get_type_name(),
+        $sformatf("{{ ag.name }}_{{ seq_name }}_seq: item sent"),
+        UVM_LOW)
+    end
+  endtask
+
+endclass

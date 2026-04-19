@@ -1,0 +1,22 @@
+package {{ cfg.project_name }}_chk_pkg;
+
+  typedef enum {
+    chk_none,
+{% for vs in cfg.virtual_seqs %}
+    chk_{{ vs }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+  } {{ cfg.project_name }}_chk_mode_e;
+
+  // ── Enum → string helper ──────────────────────────────────
+  function string chk_mode_to_string({{ cfg.project_name }}_chk_mode_e mode);
+    case (mode)
+      chk_none : return "chk_none";
+{% for vs in cfg.virtual_seqs %}
+      chk_{{ vs }} : return "chk_{{ vs }}";
+{% endfor %}
+      default  : return "UNKNOWN";
+    endcase
+  endfunction
+
+endpackage

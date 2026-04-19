@@ -1,0 +1,86 @@
+//============================================================
+// Virtual Sequence : {{ vseq_name }}_vseq
+// ── Wires together agent sequences for one test scenario ──
+//============================================================
+
+class {{ vseq_name }}_vseq extends base_vseq;
+  `uvm_object_utils({{ vseq_name }}_vseq)
+
+  function new(string name = "{{ vseq_name }}_vseq");
+    super.new(name);
+  endfunction
+
+  event all_done_evt;
+
+  // ---------------------------------------------------------
+  // Pre-body: set scoreboard checker mode before traffic
+  // ---------------------------------------------------------
+  task pre_body();
+    uvm_config_db#({{ cfg.project_name }}_chk_pkg::{{ cfg.project_name }}_chk_mode_e)::set(
+        null, "uvm_test_top.env.scb", "chk_mode",
+        {{ cfg.project_name }}_chk_pkg::chk_{{ vseq_name }});
+  endtask
+
+  // ---------------------------------------------------------
+  // Body
+  // ---------------------------------------------------------
+  task body();
+    if (starting_phase != null) starting_phase.raise_objection(this);
+    `uvm_info("VSEQ", "Running {{ vseq_name }}_vseq", UVM_LOW)
+
+    // ── Sanity checks ──────────────────────────────────────
+    if (p_sequencer == null)
+      `uvm_fatal(get_type_name(), "p_sequencer is NULL!")
+{% for ag in agents %}
+{% if ag.active and ag.sequences %}
+    if (p_sequencer.{{ ag.name }}_seqr == null)
+      `uvm_fatal(get_type_name(), "{{ ag.name }}_seqr is null!")
+{% endif %}
+{% endfor %}
+
+    fork
+      begin : MAIN_THREAD
+        // ── TODO: instantiate and start your sequences here ──
+        //
+        // Pattern (matching your existing style):
+        //
+{% for ag in agents %}
+{% if ag.active and ag.sequences %}
+        // {{ ag.name }}_{{ vseq_name }}_seq {{ ag.name }}_seq;
+{% endif %}
+{% endfor %}
+        //
+        // repeat(1) begin
+{% for ag in agents %}
+{% if ag.active and ag.sequences %}
+        //   {{ ag.name }}_seq = {{ ag.name }}_{{ vseq_name }}_seq::type_id::create("{{ ag.name }}_seq");
+{% endif %}
+{% endfor %}
+        //   fork
+{% for ag in agents %}
+{% if ag.active and ag.sequences %}
+        //     {{ ag.name }}_seq.start(p_sequencer.{{ ag.name }}_seqr);
+{% endif %}
+{% endfor %}
+        //   join
+        // end
+
+        -> all_done_evt;
+      end
+
+      begin : TIMEOUT_THREAD
+        #{{ cfg.timeout_ns }}ns;
+        `uvm_warning("TIMEOUT",
+          "Design stalled > {{ cfg.timeout_ns }}ns — applying reset")
+        apply_rst(4);
+      end
+
+    join_any
+    disable fork;
+
+    @all_done_evt;
+    if (starting_phase != null) starting_phase.drop_objection(this);
+    `uvm_info(get_type_name(), "{{ vseq_name }}_vseq completed", UVM_LOW)
+  endtask : body
+
+endclass : {{ vseq_name }}_vseq

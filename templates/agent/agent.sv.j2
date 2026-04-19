@@ -1,0 +1,52 @@
+//============================================================
+// Agent : {{ ag.name }}_agent
+//============================================================
+
+class {{ ag.name }}_agent extends uvm_agent;
+
+  `uvm_component_utils({{ ag.name }}_agent)
+
+  {{ ag.name }}_driver                   driver;
+  {{ ag.name }}_monitor                  monitor;
+  {{ ag.name }}_sequencer #({{ ag.name }}_item) sequencer;
+  {{ ag.name }}_agent_cfg                cfg;
+{% if ag.coverage %}
+  {{ ag.name }}_agent_cov                cov;
+{% endif %}
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  // ---------------------------------------------------------
+  // Build Phase
+  // ---------------------------------------------------------
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db#({{ ag.name }}_agent_cfg)::get(this, "", "cfg", cfg))
+      `uvm_fatal("{{ ag.name | upper }}_AGENT", "Cannot get {{ ag.name }}_agent_cfg")
+
+    monitor = {{ ag.name }}_monitor::type_id::create("monitor", this);
+{% if ag.coverage %}
+    cov     = {{ ag.name }}_agent_cov::type_id::create("cov", this);
+{% endif %}
+
+    if (cfg.is_active == UVM_ACTIVE) begin
+      driver    = {{ ag.name }}_driver::type_id::create("driver", this);
+      sequencer = {{ ag.name }}_sequencer::type_id::create("sequencer", this);
+    end
+  endfunction
+
+  // ---------------------------------------------------------
+  // Connect Phase
+  // ---------------------------------------------------------
+  function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    if (cfg.is_active == UVM_ACTIVE)
+      driver.seq_item_port.connect(sequencer.seq_item_export);
+{% if ag.coverage %}
+    monitor.cov_port.connect(cov.analysis_export);
+{% endif %}
+  endfunction
+
+endclass

@@ -1,0 +1,35 @@
+# Generated TB output directories
+generated_*/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+
+# Simulation artifacts
+simv
+simv.daidir/
+csrc/
+*.log
+*.key
+*.vpd
+*.fsdb
+*.fsdb.*
+simv.vdb/
+urgReport/
+regression_data/
+logs/
+verdiLog/
+novas.*
+*.rc
+*.conf
+vc_hdrs.h
+ucli.key
+
+# Editor
+.vscode/
+*.swp
+*.swo
+.DS_Store

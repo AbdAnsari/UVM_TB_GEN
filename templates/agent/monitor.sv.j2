@@ -1,0 +1,60 @@
+//============================================================
+// Monitor : {{ ag.name }}_monitor
+// ── ADD your observation logic in run_phase below ──
+//============================================================
+
+class {{ ag.name }}_monitor extends uvm_monitor;
+
+  `uvm_component_utils({{ ag.name }}_monitor)
+
+  virtual {{ ag.name }}_if.MON_MP vif;
+  {{ ag.name }}_agent_cfg         cfg;
+  {{ ag.name }}_item              item;
+
+  uvm_analysis_port #({{ ag.name }}_item) analysis_port;
+{% if ag.coverage %}
+  uvm_analysis_port #({{ ag.name }}_item) cov_port;
+{% endif %}
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+    analysis_port = new("analysis_port", this);
+{% if ag.coverage %}
+    cov_port      = new("cov_port", this);
+{% endif %}
+  endfunction
+
+  // ---------------------------------------------------------
+  // Build Phase
+  // ---------------------------------------------------------
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db#({{ ag.name }}_agent_cfg)::get(this, "", "cfg", cfg))
+      `uvm_fatal("{{ ag.name | upper }}_MON", "Cannot get {{ ag.name }}_agent_cfg")
+    vif = cfg.vif_mon;
+  endfunction
+
+  // ---------------------------------------------------------
+  // Run Phase
+  // ─────────────────────────────────────────────────────────
+  // TODO: Observe interface signals and build items to publish
+  // ---------------------------------------------------------
+  task run_phase(uvm_phase phase);
+    forever begin
+      @(vif.mon_cb);
+
+      // TODO: Detect your transaction boundary condition
+      // Example:
+      // if (vif.mon_cb.valid && vif.mon_cb.ready) begin
+      //   item = {{ ag.name }}_item::type_id::create("item", this);
+      //   item.field = vif.mon_cb.signal;
+      //   analysis_port.write(item);
+{% if ag.coverage %}
+      //   cov_port.write(item);
+{% endif %}
+      // end
+
+    end
+  endtask
+
+endclass

@@ -1,0 +1,41 @@
+//============================================================
+// Sequence Item : {{ ag.name }}_item
+// ── ADD your rand fields and constraints below ──
+//============================================================
+
+class {{ ag.name }}_item extends uvm_sequence_item;
+
+  `uvm_object_utils({{ ag.name }}_item)
+
+  // =========================================================
+  // Common signals
+  // =========================================================
+  bit clk;
+  bit rst_n;
+
+  // =========================================================
+  // TODO: Add rand fields for your protocol here
+  // ─────────────────────────────────────────────────────────
+  // Examples:
+  //   rand logic [7:0]  addr;
+  //   rand logic [31:0] data;
+  //   rand logic        valid;
+  // =========================================================
+
+
+  // =========================================================
+  // TODO: Add constraints here
+  // =========================================================
+
+
+  `uvm_object_utils_begin({{ ag.name }}_item)
+    `uvm_field_int(clk,   UVM_ALL_ON)
+    `uvm_field_int(rst_n, UVM_ALL_ON)
+    // TODO: add `uvm_field_int for each rand field above
+  `uvm_object_utils_end
+
+  function new(string name = "{{ ag.name }}_item");
+    super.new(name);
+  endfunction
+
+endclass

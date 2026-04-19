@@ -1,0 +1,79 @@
+# ╔══════════════════════════════════════════════════════════╗
+# ║   UVM TB Generator — FIFO Demo Config                    ║
+# ║   Run:  python3 ../../gen.py config/fifo_tb.yaml         ║
+# ╚══════════════════════════════════════════════════════════╝
+
+project_name  : fifo_tb
+dut_module    : sync_fifo
+output_dir    : generated_fifo_tb
+
+clk_period_ns : 10
+reset_cycles  : 5
+
+global_defines : []
+design_files   :
+  - design_files/sync_fifo.sv
+
+# ── Agents ───────────────────────────────────────────────────
+agents:
+
+  # Write-side agent — drives wr_en + wr_data into FIFO
+  - name      : wr
+    active    : true
+    coverage  : true
+    sequences :
+      - smoke
+      - burst
+      - full_fifo
+      - overflow_guard
+      - incr_data
+      - rand_data
+    ports:
+      - { name: wr_en,       direction: input,  width: 1 }
+      - { name: wr_data,     direction: input,  width: 8 }
+      - { name: full,        direction: output, width: 1 }
+      - { name: almost_full, direction: output, width: 1 }
+      - { name: fill_level,  direction: output, width: 5 }
+
+  # Read-side agent — drives rd_en, observes rd_data
+  - name      : rd
+    active    : true
+    coverage  : true
+    sequences :
+      - smoke
+      - burst
+      - empty_guard
+      - drain_all
+      - rand_rd
+    ports:
+      - { name: rd_en,        direction: input,  width: 1 }
+      - { name: rd_data,      direction: output, width: 8 }
+      - { name: empty,        direction: output, width: 1 }
+      - { name: almost_empty, direction: output, width: 1 }
+      - { name: fill_level,   direction: output, width: 5 }
+
+# ── Virtual sequences ────────────────────────────────────────
+virtual_seqs:
+  - smoke
+  - write_then_read
+  - simultaneous_wr_rd
+  - fill_and_drain
+  - overflow_test
+  - underflow_test
+  - reset_mid_op
+  - almost_flags
+
+# ── Regression list ──────────────────────────────────────────
+regression_seqs:
+  - smoke
+  - write_then_read
+  - simultaneous_wr_rd
+  - fill_and_drain
+  - overflow_test
+  - underflow_test
+  - reset_mid_op
+  - almost_flags
+
+scoreboard  : true
+coverage    : true
+timeout_ns  : 5000

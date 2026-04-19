@@ -1,0 +1,32 @@
+//============================================================
+// Virtual Sequence Base : base_vseq
+//============================================================
+
+class base_vseq extends uvm_sequence;
+
+  `uvm_object_utils(base_vseq)
+  `uvm_declare_p_sequencer(virtual_sequencer)
+
+  function new(string name = "base_vseq");
+    super.new(name);
+  endfunction
+
+  // Common utility: get clk_rst_if and apply reset from any vseq
+  virtual clk_rst_if clk_rst_vif;
+
+  task get_clk_rst_vif();
+    if (clk_rst_vif == null) begin
+      if (!uvm_config_db#(virtual clk_rst_if)::get(
+              null, "uvm_test_top.env", "clk_rst_vif", clk_rst_vif))
+        `uvm_fatal(get_type_name(), "clk_rst_vif not found in config DB")
+    end
+  endtask
+
+  task apply_rst(int unsigned reset_width_clks = 2);
+    get_clk_rst_vif();
+    `uvm_info(get_type_name(),
+      $sformatf("Applying reset for %0d cycles", reset_width_clks), UVM_LOW)
+    clk_rst_vif.apply_reset(.reset_width_clks(reset_width_clks));
+  endtask
+
+endclass

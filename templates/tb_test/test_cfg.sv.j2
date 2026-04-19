@@ -1,0 +1,16 @@
+//============================================================
+// Test Config : test_cfg
+//============================================================
+
+class test_cfg extends uvm_object;
+
+  `uvm_object_utils(test_cfg)
+
+  env_cfg m_env_cfg;
+
+  function new(string name = "test_cfg");
+    super.new(name);
+    m_env_cfg = env_cfg::type_id::create("m_env_cfg");
+  endfunction
+
+endclass

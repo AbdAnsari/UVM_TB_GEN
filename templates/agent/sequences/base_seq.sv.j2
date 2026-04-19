@@ -1,0 +1,19 @@
+//============================================================
+// Base Sequence : {{ ag.name }}_base_seq
+//============================================================
+
+class {{ ag.name }}_base_seq extends uvm_sequence #({{ ag.name }}_item);
+
+  `uvm_object_utils({{ ag.name }}_base_seq)
+
+  function new(string name = "{{ ag.name }}_base_seq");
+    super.new(name);
+  endfunction
+
+  virtual task body();
+    `uvm_info(get_type_name(),
+              "{{ ag.name }} base sequence started (does nothing by default)",
+              UVM_LOW)
+  endtask
+
+endclass

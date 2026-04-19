@@ -1,0 +1,41 @@
+import os
+import re
+
+log_dir = "logs"
+results = []
+
+print("\n" + "="*80)
+print(f"{'VSEQ NAME':<45} | {'SEED':<12} | {'STATUS':<10}")
+print("="*80)
+
+if not os.path.exists(log_dir):
+    print("No logs found.")
+    exit()
+
+for log_file in sorted(os.listdir(log_dir)):
+    if not log_file.endswith(".log"):
+        continue
+
+    path = os.path.join(log_dir, log_file)
+    status = "RUNNING"
+    seed   = "N/A"
+
+    seed_match = re.search(r'seed(\d+)', log_file)
+    if seed_match:
+        seed = seed_match.group(1)
+
+    with open(path, 'r') as f:
+        content = f.read()
+        if "UVM_ERROR :    0" in content and "UVM_FATAL :    0" in content:
+            status = "\033[92mPASS\033[0m"
+        elif "UVM_ERROR" in content or "UVM_FATAL" in content:
+            status = "\033[91mFAIL\033[0m"
+        else:
+            status = "\033[93mINCOMPLETE\033[0m"
+
+    vseq_name = log_file.split('_seed')[0]
+    if vseq_name.startswith("test_"):
+        vseq_name = vseq_name[5:]  # strip leading "test_"
+    print(f"{vseq_name:<45} | {seed:<12} | {status:<10}")
+
+print("="*80 + "\n")

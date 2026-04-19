@@ -1,0 +1,73 @@
+//============================================================
+// Scoreboard : scoreboard
+// ── ADD your checker logic inside the run_phase tasks ──
+//============================================================
+
+class scoreboard extends uvm_component;
+
+  `uvm_component_utils(scoreboard)
+
+  // =========================================================
+  // TLM FIFOs — one per agent monitor
+  // =========================================================
+{% for ag in agents %}
+  uvm_tlm_analysis_fifo #({{ ag.name }}_item) {{ ag.name }}_fifo;
+{% endfor %}
+
+  // =========================================================
+  // Checker mode (set by virtual sequence before traffic)
+  // =========================================================
+  {{ cfg.project_name }}_chk_pkg::{{ cfg.project_name }}_chk_mode_e chk_mode;
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  // ---------------------------------------------------------
+  // Build Phase
+  // ---------------------------------------------------------
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+{% for ag in agents %}
+    {{ ag.name }}_fifo = new("{{ ag.name }}_fifo", this);
+{% endfor %}
+  endfunction
+
+  // ---------------------------------------------------------
+  // Run Phase
+  // ---------------------------------------------------------
+  task run_phase(uvm_phase phase);
+    `uvm_info("SCB", "Scoreboard waiting for chk_mode...", UVM_LOW)
+    uvm_config_db#({{ cfg.project_name }}_chk_pkg::{{ cfg.project_name }}_chk_mode_e)::wait_modified(
+        this, "", "chk_mode");
+    fork
+{% for ag in agents %}
+      process_{{ ag.name }}_fifo();
+{% endfor %}
+    join
+  endtask
+
+  // =========================================================
+{% for ag in agents %}
+  // ── {{ ag.name }} FIFO processor ──────────────────────────────
+  // TODO: Add your checker logic here
+  // =========================================================
+  task process_{{ ag.name }}_fifo();
+    {{ ag.name }}_item item;
+    forever begin
+      if (!uvm_config_db#({{ cfg.project_name }}_chk_pkg::{{ cfg.project_name }}_chk_mode_e)::get(
+              this, "", "chk_mode", chk_mode))
+        chk_mode = {{ cfg.project_name }}_chk_pkg::chk_none;
+
+      {{ ag.name }}_fifo.get(item);
+
+      // TODO: Insert checker logic per chk_mode
+      // case (chk_mode)
+      //   {{ cfg.project_name }}_chk_pkg::chk_smoke: begin ... end
+      //   default: ;
+      // endcase
+    end
+  endtask
+
+{% endfor %}
+endclass
